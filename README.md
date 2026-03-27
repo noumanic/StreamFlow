@@ -134,20 +134,20 @@ npm -v
 
 ## Docker Compose Setup
 
-Create `docker-compose.yml`:
+Create `docker-compose.yml` with dual listeners for internal/external connectivity:
 
 ```yaml
 version: '3'
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     depends_on:
       - zookeeper
@@ -156,7 +156,9 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 ```
 
@@ -357,11 +359,31 @@ npm install
 # Create Kafka topics
 npm run create:topics
 
-# Start services in separate terminals
+# Start services in separate terminals to observe real-time flow:
 npm run start:logging
 npm run start:notification
 npm run start:producer
 ```
+
+> [!TIP]
+> Running the **Producer** and **Consumers** in different terminal windows allows you to see how events are produced in one place and instantly "fan-out" to multiple consumers in others.
+
+### Execution Snapshot
+Below is a real-time view of all services running in separate terminals:
+![Multi-terminal execution](snapshots/terminal_all.png)
+
+---
+
+## 📸 Project Snapshots
+
+### Docker Environment Startup
+The following snapshots illustrate the build and startup process of the Kafka infrastructure and the StreamFlow application.
+
+#### 1. Building and Pulling Images
+![Docker build process](snapshots/docker_terminal_1.png)
+
+#### 2. Services Running and Topic Initialization
+![Docker logs and success](snapshots/docker_terminal_2.png)
 
 ---
 
