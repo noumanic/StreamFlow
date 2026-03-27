@@ -1,0 +1,18 @@
+flowchart LR
+
+    A[Producer Service\n(Node.js)] -->|Send Events| K[Kafka Broker]
+
+    K -->|user-events| B[Logging Service]
+    K -->|user-events| C[Notification Service]
+
+    C -->|Produces| K2[Kafka Broker]
+
+    K2 -->|notifications| D[Notification Topic]
+
+    B --> E[Console Logs]
+    D --> F[Notification Output]
+
+    subgraph Kafka Cluster
+        K
+        K2
+    end
