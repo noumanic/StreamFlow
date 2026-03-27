@@ -1,54 +1,90 @@
-flowchart LR
-    classDef producer fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#ffffff
-    classDef kafka fill:#0f3460,stroke:#16213e,stroke-width:2px,color:#ffffff
-    classDef consumer fill:#16213e,stroke:#0f3460,stroke-width:2px,color:#e0e0e0
-    classDef output fill:#1b4332,stroke:#40916c,stroke-width:2px,color:#d8f3dc
-    classDef zookeeper fill:#3d1a78,stroke:#7b2fff,stroke-width:2px,color:#e9d5ff
-    classDef topic fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fed7aa
+flowchart TB
+    %% --- Master Theme & Precision Styling ---
+    accTitle: StreamFlow Master-Level System Architecture
+    accDescr: An exhaustive mapping of the end-to-end Data Engineering ecosystem.
 
-    ZK["🐘 Zookeeper\n:2181\nCluster Coordinator"]
+    classDef default fill:#0f172a,stroke:#334155,stroke-width:1px,color:#cbd5e1;
+    classDef producer fill:#020617,stroke:#10b981,stroke-width:2px,color:#fff;
+    classDef kafka fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff;
+    classDef processing fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#fff;
+    classDef storage fill:#020617,stroke:#ef4444,stroke-width:2px,color:#fff;
+    classDef frontend fill:#1e293b,stroke:#f59e0b,stroke-width:2px,color:#fff;
+    classDef network fill:#0f172a,stroke:#64748b,stroke-dasharray: 4 4,color:#94a3b8;
+    classDef init fill:#111827,stroke:#9ca3af,stroke-width:1px,color:#9ca3af,stroke-dasharray: 2 2;
 
-    subgraph DOCKER["🐳 Docker Network"]
+    %% --- Layer 1: Ingestion Ecosystem ---
+    subgraph INGEST ["🚀 INGESTION LAYER (NODE.JS 20)"]
         direction LR
-
-        subgraph KAFKA_CLUSTER["⚡ Kafka Cluster  |  Port 9092"]
-            direction TB
-            ZK
-            K["📨 Kafka Broker\nID: 1  |  localhost:9092\nKafkaJS Client"]
-            T1["📌 Topic: user-events\nPartitions: 1  |  Replication: 1"]
-            T2["📌 Topic: notifications\nPartitions: 1  |  Replication: 1"]
-            T3["📌 Topic: logs\nPartitions: 1  |  Replication: 1"]
-            ZK -->|"coordinates"| K
-            K --> T1
-            K --> T2
-            K --> T3
-        end
-
-        subgraph PRODUCER["🚀 Producer Layer"]
-            P["⚙️ eventProducer.js\nNode.js  |  group: streamflow-app\nEmits every 3s: USER_LOGIN"]
-        end
-
-        subgraph CONSUMERS["🎯 Consumer Layer"]
-            C1["🔔 notificationConsumer.js\nNode.js  |  group: notification-group\nSubscribes: user-events"]
-            C2["📋 loggingConsumer.js\nNode.js  |  group: logging-group\nSubscribes: user-events"]
-        end
+        P1["⚙️ eventProducer.js\nMath.random() Distribution\n3s Intermittent Emission"]
+        P1 --> P2["🛡️ security.js\nSHA-256 PII Redaction\nMasked: {user_email}"]
     end
 
-    subgraph OUTPUTS["📤 Outputs"]
-        O1["💬 Notification Output\nJSON: message + timestamp"]
-        O2["🖥️ Console Logs\nStructured Event Log"]
+    %% --- Layer 2: Transport (Broker) ---
+    subgraph BROKER ["⚡ PERSISTENT DATA BUS (APACHE KAFKA)"]
+        direction TB
+        ZK["🐘 Zookeeper\nCluster Coordination\nPort: 2181 / 2888 / 3888"]
+        K1["📨 Kafka Broker v7.5\nPLAINTEXT: 9092\nINTERNAL: 29092"]
+        
+        INIT["🏗️ init-kafka (InitContainer)\nExec: createTopics.js\nCreates Paritions & Specs"]
+
+        subgraph TOPICS ["📁 TOPIC REGISTRY"]
+            T1["📌 user-events\nPartitions: 3\nReten: 168h"]
+            T2["📌 analytics\nAggregated Telemetry"]
+            T3["📌 notifications\nVerified Data Objects"]
+            T4["⚠️ dead-letter-topic\nFault Isolation (DLQ)"]
+        end
+
+        INIT -.->"Check Health"| K1
+        ZK -.->"Leader Election"| K1
+        K1 === T1 & T2 & T3 & T4
     end
 
-    P -->|"produce\nuser-events"| T1
-    T1 -->|"consume\nfan-out"| C1
-    T1 -->|"consume\nfan-out"| C2
-    C1 -->|"re-produce\nnotifications"| T2
-    C2 -->|"write log"| O2
-    T2 -->|"consume"| O1
+    %% --- Layer 3: Transformation Workspace ---
+    subgraph PROCESS ["🎯 TRANSFORMATION LAYER (DISTRIBUTED CONSUMERS)"]
+        direction LR
+        C1["📊 analyticsConsumer.js\nGroup: analytics-group\nWindow: 10s Tumbling"]
+        C2["🔔 notificationConsumer.js\nGroup: notification-group\nZod Schema Enforcement"]
+    end
 
-    class P producer
-    class K kafka
-    class T1,T2,T3 topic
-    class C1,C2 consumer
-    class O1,O2 output
-    class ZK zookeeper
+    %% --- Layer 4: Persistence & Reliability ---
+    subgraph SINK ["💾 PERSISTENCE & FAULT TOLERANCE"]
+        direction TB
+        DB_S["📥 dbConsumer.js\nGroup: db-group\nPostgreSQL Sink"]
+        PG["🐘 PostgreSQL 15\nTable: 'events'\nInternal Port: 5432"]
+        DLQ_S["❌ Error Observer\nSchema/JSON Fault\nPersistence to T4"]
+    end
+
+    %% --- Layer 5: Serving & Real-Time Observer ---
+    subgraph SERVE ["🖥️ OBSERVABILITY COCKPIT (THE BRIDGE)"]
+        direction TB
+        WS["🌉 websocketBridge.js\nSocket.IO v4.8\nPort: 3001 | 1.2k req/s"]
+        DASH["💎 React Dashboard\nVite 8 + Tailwind 4\nRecharts Gallery"]
+    end
+
+    %% --- Advanced Data Flow ---
+    P2 ===>|"KAFKA_BROKER:29092"| T1
+    
+    T1 --->|"Stateful Map"| C1
+    C1 --->|"Agg: LoginCount"| T2
+    
+    T1 --->|"Schema Validate"| C2
+    C2 --"Success"--> T3
+    C2 --"DLQ Redirect"--> T4
+    
+    T1 & T2 ---> DB_S
+    DB_S ===>|"DATABASE_URL"| PG
+    
+    T3 & T4 ---> DLQ_S
+
+    %% Critical Serving Logic
+    T1 & T2 & T3 & T4 -.->|"Event Pipeline"| WS
+    WS ===>|"Broadcasting\n'kafka-event'"| DASH
+
+    %% --- Class Assignments ---
+    class P1,P2 producer;
+    class K1,T1,T2,T3,T4 kafka;
+    class C1,C2 processing;
+    class DB_S,PG,DLQ_S storage;
+    class WS,DASH frontend;
+    class INGEST,BROKER,PROCESS,SINK,SERVE network;
+    class INIT init;

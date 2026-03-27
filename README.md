@@ -1,411 +1,194 @@
-# StreamFlow – Real-Time Basic Event Streaming Platform
+# StreamFlow – Professional Data Engineering Pipeline 🚀
 
-A professional, application-oriented Kafka project using Node.js, Zookeeper, and Docker for real-time event streaming.
-
----
-
-## Overview
-
-StreamFlow is a lightweight event-driven system where services communicate via Kafka. It demonstrates:
-
-* Running Kafka & Zookeeper using Docker
-* Creating Kafka topics
-* Producing messages from Node.js
-* Consuming messages in Node.js
-* Real-time event-driven architecture
+StreamFlow is a event streaming platform designed to demonstrate the complete **Data Engineering Lifecycle**. It transitions from simple message passing to a managed, resilient ecosystem following industry best practices.
 
 ---
 
-## Tech Stack
+## 🏛️ System Architecture
 
-* Node.js
-* Apache Kafka
-* Zookeeper
-* Docker & Docker Compose
-* KafkaJS library
-
----
-## Architecture
 ```mermaid
-flowchart LR
-    classDef producer fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#ffffff
-    classDef kafka fill:#0f3460,stroke:#16213e,stroke-width:2px,color:#ffffff
-    classDef consumer fill:#16213e,stroke:#0f3460,stroke-width:2px,color:#e0e0e0
-    classDef output fill:#1b4332,stroke:#40916c,stroke-width:2px,color:#d8f3dc
-    classDef zookeeper fill:#3d1a78,stroke:#7b2fff,stroke-width:2px,color:#e9d5ff
-    classDef topic fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fed7aa
+flowchart TB
+    %% --- Theme & Styling ---
+    classDef default fill:#0f172a,stroke:#334155,stroke-width:1px,color:#cbd5e1;
+    classDef producer fill:#020617,stroke:#10b981,stroke-width:2px,color:#fff;
+    classDef kafka fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff;
+    classDef processing fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#fff;
+    classDef storage fill:#020617,stroke:#ef4444,stroke-width:2px,color:#fff;
+    classDef frontend fill:#1e293b,stroke:#f59e0b,stroke-width:2px,color:#fff;
+    classDef network fill:#0f172a,stroke:#64748b,stroke-dasharray: 5 5,color:#94a3b8;
 
-    ZK["🐘 Zookeeper\n:2181\nCluster Coordinator"]
+    subgraph INGEST ["🚀 INGESTION LAYER"]
+        P1["⚙️ eventProducer.js\nNode.js Runtime\nRandom Distribution"]
+        P1 --> P2["🛡️ security.js\nSHA-256 Hashing\nPII Masking (Email)"]
+    end
 
-    subgraph DOCKER["🐳 Docker Network"]
+    subgraph BROKER ["⚡ DATA BUS (KAFKA)"]
+        direction TB
+        ZK["🐘 Zookeeper\nCluster Coordinator\nPort: 2181"]
+        K1["📨 Kafka Broker\nID: 1 | Port: 9092\nInternal: 29092"]
+        
+        T1["📌 Topic: user-events\nPartitions: 3\nReplication: 1"]
+        T2["📌 Topic: analytics\nAggregated Stats"]
+        T3["📌 Topic: notifications\nProcessed Events"]
+        T4["⚠️ dead-letter-topic\nValidation Failures"]
+
+        ZK -.-> K1
+        K1 === T1
+        K1 === T2
+        K1 === T3
+        K1 === T4
+    end
+
+    subgraph PROCESS ["🎯 TRANSFORMATION LAYER"]
         direction LR
-
-        subgraph KAFKA_CLUSTER["⚡ Kafka Cluster  |  Port 9092"]
-            direction TB
-            ZK
-            K["📨 Kafka Broker\nID: 1  |  localhost:9092\nKafkaJS Client"]
-            T1["📌 Topic: user-events\nPartitions: 1  |  Replication: 1"]
-            T2["📌 Topic: notifications\nPartitions: 1  |  Replication: 1"]
-            T3["📌 Topic: logs\nPartitions: 1  |  Replication: 1"]
-            ZK -->|"coordinates"| K
-            K --> T1
-            K --> T2
-            K --> T3
-        end
-
-        subgraph PRODUCER["🚀 Producer Layer"]
-            P["⚙️ eventProducer.js\nNode.js  |  group: streamflow-app\nEmits every 3s: USER_LOGIN"]
-        end
-
-        subgraph CONSUMERS["🎯 Consumer Layer"]
-            C1["🔔 notificationConsumer.js\nNode.js  |  group: notification-group\nSubscribes: user-events"]
-            C2["📋 loggingConsumer.js\nNode.js  |  group: logging-group\nSubscribes: user-events"]
-        end
+        C1["📊 analyticsConsumer.js\nTumbling Window: 10s\nKey: USER_LOGIN_COUNT"]
+        C2["🔔 notificationConsumer.js\nZod Schema Validation\nDLQ Fault Tolerance"]
     end
 
-    subgraph OUTPUTS["📤 Outputs"]
-        O1["💬 Notification Output\nJSON: message + timestamp"]
-        O2["🖥️ Console Logs\nStructured Event Log"]
+    subgraph SINK ["💾 PERSISTENCE & FAULT TOLERANCE"]
+        direction TB
+        DB_S["📥 dbConsumer.js\nPostgreSQL Sink"]
+        PG["🐘 PostgreSQL 15\nTable: 'events'\nSchema Locked"]
+        DLQ_S["❌ Error Storage\nSchema Mismatch Log"]
     end
 
-    P -->|"produce\nuser-events"| T1
-    T1 -->|"consume\nfan-out"| C1
-    T1 -->|"consume\nfan-out"| C2
-    C1 -->|"re-produce\nnotifications"| T2
-    C2 -->|"write log"| O2
-    T2 -->|"consume"| O1
+    subgraph SERVE ["🖥️ OBSERVABILITY COCKPIT"]
+        direction TB
+        WS["🌉 websocketBridge.js\nSocket.IO v4.8\nPort: 3001"]
+        DASH["💎 React Dashboard\nVite + Tailwind v4\nRecharts Gallery"]
+    end
 
-    class P producer
-    class K kafka
-    class T1,T2,T3 topic
-    class C1,C2 consumer
-    class O1,O2 output
-    class ZK zookeeper
-```
----
+    P2 ===> T1
+    T1 ---> C1
+    C1 ---> T2
+    T1 ---> C2
+    C2 --"Success"--> T3
+    C2 --"Failure"--> T4
+    T1 ---> DB_S
+    DB_S ===> PG
+    WS ===> DASH
 
-## Project Structure
-
-```
-streamflow/
-│
-├── docker-compose.yml
-├── .env
-├── package.json
-│
-├── config/
-│   └── kafka.js
-│
-├── producer/
-│   └── eventProducer.js
-│
-├── consumer/
-│   ├── notificationConsumer.js
-│   └── loggingConsumer.js
-│
-├── topics/
-│   └── createTopics.js
-│
-├── utils/
-│   └── logger.js
-│
-└── README.md
+    class P1,P2 producer;
+    class K1,T1,T2,T3,T4 kafka;
+    class C1,C2 processing;
+    class DB_S,PG,DLQ_S storage;
+    class WS,DASH frontend;
+    class INGEST,BROKER,PROCESS,SINK,SERVE network;
 ```
 
 ---
 
-## Prerequisites
+## 🧬 The Data Engineering Lifecycle (DELC) Implementation
 
-Make sure you have installed:
+StreamFlow implements the industry-standard **Data Engineering Lifecycle** with high-fidelity practices at every stage:
 
-* Docker Desktop (running)
-* Node.js (v14+ recommended)
-* npm
+### 1. 🏗️ Generation (Source)
+- **High-Velocity Simulation:** `eventProducer.js` generates standardized JSON login events.
+- **Undercurrent: Security:** In-transit **Data Masking** (SHA-256) redacts sensitive `user_email` patterns before they enter the stream.
 
-Verify installation:
+### 2. 📥 Ingestion
+- **Resilient Transport:** Apache Kafka acts as the decoupled, durable intake buffer.
+- **Architectural Scaling:** Configured with **3 Partitions** per topic to enable parallel ingestion and high-throughput ingestion.
 
-```powershell
-docker --version
-node -v
-npm -v
-```
+### 3. ⚡ Transformation
+- **Stateful Processing:** `analyticsConsumer.js` performs **Tumbling Window** aggregations (10s intervals).
+- **Undercurrent: Data Management:** **Zod Schema Validation** creates a strict data contract; invalid payloads are routed to a **Dead Letter Queue (DLQ)**.
 
----
+### 4. 💾 Storage
+- **Relational Persistence:** `dbConsumer.js` sinks validated events into **PostgreSQL 15**.
+- **Structured Schema:** Hardened table definitions ensure consistent historical data retrieval.
 
-## Docker Compose Setup
-
-Create `docker-compose.yml` with dual listeners for internal/external connectivity:
-
-```yaml
-version: '3'
-
-services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-```
+### 5. 🚀 Serving
+- **Real-Time Delivery:** **WebSocket Bridge** (Socket.io) serves as the presentation layer.
+- **Observability Cockpit:** A high-end **React Dashboard** provides live observability of the entire pipeline velocity.
 
 ---
 
-## Environment Variables
-
-Create `.env`:
-
-```
-KAFKA_BROKER=localhost:9092
-```
-
----
-
-## Node.js Setup
-
-Initialize project and install dependencies:
-
-```powershell
-npm init -y
-npm install kafkajs dotenv
-```
+## 🛠️ Tech Stack
+- **Streaming:** Apache Kafka, Zookeeper
+- **Backend:** Node.js, Express, Socket.io, KafkaJS
+- **Frontend:** React, Vite, TailwindCSS v4, Recharts
+- **Database:** PostgreSQL 15
+- **Tools:** Docker, Jest, Zod, Framer-motion
 
 ---
 
-## Kafka Configuration
+## 📊 Visual Platform Walkthrough
 
-`config/kafka.js`:
+### 💎 High-Density Operational Cockpit
+The StreamFlow dashboard provides real-time throughput velocity, deep-payload inspection, and infrastructure health monitoring.
+![Dashboard Screenshot](snapshots/dashboard_streamflow.png)
 
-```javascript
-const { Kafka } = require('kafkajs');
-require('dotenv').config();
+### ⚡ Kafka Infrastructure & Topic Management
+Full visibility into the 3-partition scaling and message distribution via Kafka-UI.
+![Kafka UI Topics](snapshots/kafka_ui_topics.png)
+![Kafka UI Consumers](snapshots/kafka_ui_consumers.png)
 
-const kafka = new Kafka({
-    clientId: 'streamflow-app',
-    brokers: [process.env.KAFKA_BROKER]
-});
-
-module.exports = kafka;
-```
-
----
-
-## Create Topics
-
-`topics/createTopics.js`:
-
-```javascript
-const kafka = require('../config/kafka');
-
-async function createTopics() {
-    const admin = kafka.admin();
-    await admin.connect();
-
-    await admin.createTopics({
-        topics: [
-            { topic: 'user-events', numPartitions: 1 },
-            { topic: 'notifications', numPartitions: 1 },
-            { topic: 'logs', numPartitions: 1 }
-        ]
-    });
-
-    console.log('Topics created');
-    await admin.disconnect();
-}
-
-createTopics();
-```
+### 🛰️ Real-Time Pipeline Terminals
+Observation of the end-to-end data flow: Producer -> Analytics -> Bridge -> DB.
+![Producer Terminal](snapshots/producer_terminal.png)
+![Analytics Terminal](snapshots/analytics_terminal.png)
+![DB Terminal](snapshots/streamflow_db_terminal.png)
 
 ---
 
-## Producer: eventProducer.js
+## 🚀 Getting Started
 
-`producer/eventProducer.js`:
-
-```javascript
-const kafka = require('../config/kafka');
-
-const producer = kafka.producer();
-
-async function run() {
-    await producer.connect();
-
-    let count = 0;
-
-    setInterval(async () => {
-        const event = {
-            id: count++,
-            type: 'USER_LOGIN',
-            user: `user_${count}`,
-            timestamp: new Date().toISOString()
-        };
-
-        await producer.send({
-            topic: 'user-events',
-            messages: [{ value: JSON.stringify(event) }]
-        });
-
-        console.log('Produced:', event);
-    }, 3000);
-}
-
-run();
-```
-
----
-
-## Consumer: notificationConsumer.js
-
-`consumer/notificationConsumer.js`:
-
-```javascript
-const kafka = require('../config/kafka');
-
-const consumer = kafka.consumer({ groupId: 'notification-group' });
-const producer = kafka.producer();
-
-async function run() {
-    await consumer.connect();
-    await producer.connect();
-
-    await consumer.subscribe({ topic: 'user-events' });
-
-    await consumer.run({
-        eachMessage: async ({ message }) => {
-            const event = JSON.parse(message.value.toString());
-
-            const notification = {
-                message: `User ${event.user} logged in`,
-                time: event.timestamp
-            };
-
-            await producer.send({
-                topic: 'notifications',
-                messages: [{ value: JSON.stringify(notification) }]
-            });
-
-            console.log('Notification created:', notification);
-        }
-    });
-}
-
-run();
-```
-
----
-
-## Consumer: loggingConsumer.js
-
-`consumer/loggingConsumer.js`:
-
-```javascript
-const kafka = require('../config/kafka');
-
-const consumer = kafka.consumer({ groupId: 'logging-group' });
-
-async function run() {
-    await consumer.connect();
-
-    await consumer.subscribe({ topic: 'user-events' });
-
-    await consumer.run({
-        eachMessage: async ({ message }) => {
-            const event = JSON.parse(message.value.toString());
-            console.log('Log:', event);
-        }
-    });
-}
-
-run();
-```
-
----
-
-## Utility: Logger
-
-`utils/logger.js`:
-
-```javascript
-function log(message) {
-    console.log(`[${new Date().toISOString()}] ${message}`);
-}
-
-module.exports = log;
-```
----
-
-## Running the Project
-
-```powershell
-# Start Kafka and Zookeeper
+### 1. Start Infrastructure
+```bash
 docker-compose up -d
-
-# Install Node.js dependencies
-npm install
-
-# Create Kafka topics
-npm run create:topics
-
-# Start services in separate terminals to observe real-time flow:
-npm run start:logging
-npm run start:notification
-npm run start:producer
 ```
 
-> [!TIP]
-> Running the **Producer** and **Consumers** in different terminal windows allows you to see how events are produced in one place and instantly "fan-out" to multiple consumers in others.
+### 2. Launch Dashboard
+```bash
+cd dashboard && npm run dev
+```
 
-### Execution Snapshot
-Below is a real-time view of all services running in separate terminals:
-![Multi-terminal execution](snapshots/terminal_all.png)
-
----
-
-## 📸 Project Snapshots
-
-### Docker Environment Startup
-The following snapshots illustrate the build and startup process of the Kafka infrastructure and the StreamFlow application.
-
-#### 1. Building and Pulling Images
-![Docker build process](snapshots/docker_terminal_1.png)
-
-#### 2. Services Running and Topic Initialization
-![Docker logs and success](snapshots/docker_terminal_2.png)
+### 3. Start Pipeline
+```bash
+npm run create:topics
+npm run start:producer
+npm run start:analytics
+npm run start:db
+npm run start:bridge
+```
 
 ---
 
-## Notes
+## 🏗️ Detailed Micro-Architecture Specifications
 
-* Default Kafka port: 9092
-* Zookeeper port: 2181
-* Ensure Docker is running before starting services
-* KafkaJS is production-ready, `kafkajs` is used instead of `kafka-node`
+To ensure the platform is enterprise-ready, the following precise network and service specifications are implemented:
+
+| Component | Technology | Internal Port | External Port | Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Broker** | Apache Kafka 7.5 | `29092` | `9092` | Distributed Event Log |
+| **Coordinator** | Zookeeper | `2181` | - | Cluster State Manager |
+| **Persistence** | PostgreSQL 15 | `5432` | `5432` | Historical Sink |
+| **Bridge** | Express + Socket.IO | `3001` | `3001` | WebSocket Telemetry |
+| **Dashboard** | React + Vite | `5173` | `5173` | Observability Cockpit |
+| **Monitoring** | Kafka-UI | `8080` | `8080` | Cluster Management |
+
+### 🛰️ Service Discovery & Orchestration
+The environment uses a robust **Init-Container pattern**:
+1.  **Stage 1:** `db` and `kafka` services initiate with health checks.
+2.  **Stage 2:** `init-kafka` executes topic creation (3 Partitions) and waits for cluster availability.
+3.  **Stage 3:** Operational microservices (`producer`, `analytics`, `bridge`, etc.) start only after Stage 2 success, preventing race conditions and partial failures.
 
 ---
 
-## Future Improvements
+### 📊 DataOps & Observability
+- **Platform Health:** Automated service health checks and 24/7 Kafka monitoring via **Kafka-UI**.
+- **Real-Time Telemetry:** Millisecond-latency tracking via the **Socket.IO Bridge** and **Payload Inspector**.
 
-* Add Express API → Kafka pipeline
-* Add React dashboard (real-time UI)
-* Integrate Redis caching
-* Add PostgreSQL storage
-* Implement multi-partition topics & consumer groups
+### 🛠️ DevOps & Infrastructure
+- **Orchestration:** Fully containerized setup with **Docker Compose** managing the microservices mesh.
+- **CI/CD:** **GitHub Actions** pipeline for automated build validation and regression testing.
+
+### 🧪 Quality Assurance
+- **Automated Testing:** Comprehensive **Jest** suite covering PII masking and Zod schema contracts.
+- **Fault Isolation:** **Dead Letter Queue (DLQ)** prevents upstream data corruption.
 
 ---
 
-## License
-
-MIT License
+## 📜 License
+© 2026 MNH (@noumanic). Licensed under the MIT License.
