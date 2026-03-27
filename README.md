@@ -157,9 +157,13 @@ sequenceDiagram
     
     Note right of K: [Ingestion] Durable Persistence
 
-    K->>A: 📊 Stream to Analytics
-    K->>N: 🔔 Stream to Notification
-    K->>PG: 💾 Sync to DB (dbConsumer.js)
+    par Ingestion Broadcast
+        K->>A: 📊 Stream to Analytics
+    and 
+        K->>N: 🔔 Stream to Notification
+    and
+        K->>PG: 💾 Sync to DB (dbConsumer.js)
+    end
 
     Note over A: [Transformation] 10s Tumbling Window
     A->>K: 📊 Publish Aggregates to 'analytics'

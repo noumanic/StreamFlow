@@ -14,13 +14,13 @@ sequenceDiagram
     P->>P: 🛡️ maskEmail(user_email)
     P->>K: 📥 Publish to 'user-events' (Partition 0-2)
     
-    rect rgb(30, 41, 59)
-        Note right of K: [Ingestion] Durable Persistence
-    end
+    Note right of K: [Ingestion] Durable Persistence
 
-    parallel
+    par Ingestion Broadcast
         K->>A: 📊 Stream to Analytics
+    and 
         K->>N: 🔔 Stream to Notification
+    and
         K->>PG: 💾 Sync to DB (dbConsumer.js)
     end
 
