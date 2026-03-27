@@ -4,7 +4,11 @@
   "description": "A professional, application-oriented Kafka project using Node.js, Zookeeper, and Docker for real-time event streaming.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create:topics": "node topics/createTopics.js",
+    "start:producer": "node producer/eventProducer.js",
+    "start:notification": "node consumer/notificationConsumer.js",
+    "start:logging": "node consumer/loggingConsumer.js"
   },
   "keywords": [],
   "author": "",
