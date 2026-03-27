@@ -25,6 +25,64 @@ StreamFlow is a lightweight event-driven system where services communicate via K
 * KafkaJS library
 
 ---
+## Architecture
+```mermaid
+flowchart LR
+    classDef producer fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#ffffff
+    classDef kafka fill:#0f3460,stroke:#16213e,stroke-width:2px,color:#ffffff
+    classDef consumer fill:#16213e,stroke:#0f3460,stroke-width:2px,color:#e0e0e0
+    classDef output fill:#1b4332,stroke:#40916c,stroke-width:2px,color:#d8f3dc
+    classDef zookeeper fill:#3d1a78,stroke:#7b2fff,stroke-width:2px,color:#e9d5ff
+    classDef topic fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fed7aa
+
+    ZK["🐘 Zookeeper\n:2181\nCluster Coordinator"]
+
+    subgraph DOCKER["🐳 Docker Network"]
+        direction LR
+
+        subgraph KAFKA_CLUSTER["⚡ Kafka Cluster  |  Port 9092"]
+            direction TB
+            ZK
+            K["📨 Kafka Broker\nID: 1  |  localhost:9092\nKafkaJS Client"]
+            T1["📌 Topic: user-events\nPartitions: 1  |  Replication: 1"]
+            T2["📌 Topic: notifications\nPartitions: 1  |  Replication: 1"]
+            T3["📌 Topic: logs\nPartitions: 1  |  Replication: 1"]
+            ZK -->|"coordinates"| K
+            K --> T1
+            K --> T2
+            K --> T3
+        end
+
+        subgraph PRODUCER["🚀 Producer Layer"]
+            P["⚙️ eventProducer.js\nNode.js  |  group: streamflow-app\nEmits every 3s: USER_LOGIN"]
+        end
+
+        subgraph CONSUMERS["🎯 Consumer Layer"]
+            C1["🔔 notificationConsumer.js\nNode.js  |  group: notification-group\nSubscribes: user-events"]
+            C2["📋 loggingConsumer.js\nNode.js  |  group: logging-group\nSubscribes: user-events"]
+        end
+    end
+
+    subgraph OUTPUTS["📤 Outputs"]
+        O1["💬 Notification Output\nJSON: message + timestamp"]
+        O2["🖥️ Console Logs\nStructured Event Log"]
+    end
+
+    P -->|"produce\nuser-events"| T1
+    T1 -->|"consume\nfan-out"| C1
+    T1 -->|"consume\nfan-out"| C2
+    C1 -->|"re-produce\nnotifications"| T2
+    C2 -->|"write log"| O2
+    T2 -->|"consume"| O1
+
+    class P producer
+    class K kafka
+    class T1,T2,T3 topic
+    class C1,C2 consumer
+    class O1,O2 output
+    class ZK zookeeper
+```
+---
 
 ## Project Structure
 
@@ -285,26 +343,6 @@ function log(message) {
 
 module.exports = log;
 ```
-
----
-
-## Architecture (Mermaid)
-
-```mermaid
-flowchart LR
-    A[Producer Service\n(Node.js)] -->|Send Events| K[Kafka Broker]
-    K -->|user-events| B[Logging Service]
-    K -->|user-events| C[Notification Service]
-    C -->|Produces| K2[Kafka Broker]
-    K2 -->|notifications| D[Notification Topic]
-    B --> E[Console Logs]
-    D --> F[Notification Output]
-    subgraph Kafka Cluster
-        K
-        K2
-    end
-```
-
 ---
 
 ## Running the Project
