@@ -32,7 +32,7 @@ flowchart TB
         T3["📌 Topic: notifications\nProcessed Events"]
         T4["⚠️ dead-letter-topic\nValidation Failures"]
 
-        ZK -.-> K1
+        ZK -.->|Cluster Discovery| K1
         K1 === T1
         K1 === T2
         K1 === T3

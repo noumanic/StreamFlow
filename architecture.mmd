@@ -34,8 +34,8 @@ flowchart TB
             T4["⚠️ dead-letter-topic\nFault Isolation (DLQ)"]
         end
 
-        INIT -.->"Check Health"| K1
-        ZK -.->"Leader Election"| K1
+        INIT -.->|Check Health| K1
+        ZK -.->|Leader Election| K1
         K1 === T1 & T2 & T3 & T4
     end
 
