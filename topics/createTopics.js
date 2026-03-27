@@ -6,9 +6,11 @@ async function createTopics() {
 
     await admin.createTopics({
         topics: [
-            { topic: 'user-events', numPartitions: 1 },
-            { topic: 'notifications', numPartitions: 1 },
-            { topic: 'logs', numPartitions: 1 }
+            { topic: 'user-events', numPartitions: 3 },
+            { topic: 'notifications', numPartitions: 3 },
+            { topic: 'logs', numPartitions: 3 },
+            { topic: 'analytics', numPartitions: 3 },
+            { topic: 'dead-letter-topic', numPartitions: 3 }
         ]
     });
 

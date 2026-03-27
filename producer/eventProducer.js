@@ -9,9 +9,10 @@ async function run() {
 
     setInterval(async () => {
         const event = {
-            id: count++,
+            id: Math.floor(Math.random() * 1000),
             type: 'USER_LOGIN',
-            user: `user_${count}`,
+            user: `user_${Math.floor(Math.random() * 100)}`,
+            user_email: `user_${Math.floor(Math.random() * 100)}@example.com`,
             timestamp: new Date().toISOString()
         };
 
