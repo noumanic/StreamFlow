@@ -1,6 +1,5 @@
 flowchart LR
-
-    A[Producer Service\n(Node.js)] -->|Send Events| K[Kafka Broker]
+    A[Producer Service<br>(Node.js)] -->|Send Events| K[Kafka Broker]
 
     K -->|user-events| B[Logging Service]
     K -->|user-events| C[Notification Service]
