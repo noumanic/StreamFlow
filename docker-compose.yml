@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   zookeeper:
@@ -21,15 +21,109 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  streamflow-app:
-    build: .
-    container_name: streamflow-app
+  db:
+    image: postgres:15-alpine
+    container_name: streamflow-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: streamflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d streamflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
     depends_on:
       - kafka
-    working_dir: /app
-    volumes:
-      - .:/app
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+  # Init: Create Topics
+  init-kafka:
+    build: .
+    container_name: streamflow-init
+    depends_on:
+      kafka:
+        condition: service_healthy
     command: node topics/createTopics.js
     environment:
       KAFKA_BROKER: kafka:29092
+    restart: "no"
+
+  # Core Services
+  producer:
+    build: .
+    container_name: streamflow-producer
+    depends_on:
+      init-kafka:
+        condition: service_completed
+    command: node producer/eventProducer.js
+    environment:
+      KAFKA_BROKER: kafka:29092
+
+  analytics:
+    build: .
+    container_name: streamflow-analytics
+    depends_on:
+      init-kafka:
+        condition: service_completed
+    command: node consumer/analyticsConsumer.js
+    environment:
+      KAFKA_BROKER: kafka:29092
+
+  db-consumer:
+    build: .
+    container_name: streamflow-db-consumer
+    depends_on:
+      db:
+        condition: service_healthy
+      init-kafka:
+        condition: service_completed
+    command: node consumer/dbConsumer.js
+    environment:
+      KAFKA_BROKER: kafka:29092
+      DATABASE_URL: postgres://user:password@db:5432/streamflow
+
+  notification:
+    build: .
+    container_name: streamflow-notification
+    depends_on:
+      init-kafka:
+        condition: service_completed
+    command: node consumer/notificationConsumer.js
+    environment:
+      KAFKA_BROKER: kafka:29092
+
+  bridge:
+    build: .
+    container_name: streamflow-bridge
+    depends_on:
+       init-kafka:
+        condition: service_completed
+    ports:
+      - "3001:3001"
+    command: node server/websocketBridge.js
+    environment:
+      KAFKA_BROKER: kafka:29092
+      PORT: 3001
+
+volumes:
+  postgres_data:
