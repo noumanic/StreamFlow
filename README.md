@@ -136,7 +136,47 @@ StreamFlow implements the industry-standard **Data Engineering Lifecycle** with 
 
 ---
 
-## 📊 Visual Platform Walkthrough
+## 🔄 The Life of a StreamFlow Event (Sequence Flow)
+
+The following diagram traces the temporal journey of a single event from generation to persistence and real-time visualization:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as ⚙️ eventProducer.js
+    participant K as ⚡ Apache Kafka
+    participant A as 📊 analyticsConsumer.js
+    participant N as 🔔 notificationConsumer.js
+    participant B as 🌉 websocketBridge.js
+    participant D as 💎 React Dashboard
+    participant PG as 🐘 PostgreSQL 15
+
+    Note over P: [Generation] Create JSON Event
+    P->>P: 🛡️ maskEmail(user_email)
+    P->>K: 📥 Publish to 'user-events' (Partition 0-2)
+    
+    Note right of K: [Ingestion] Durable Persistence
+
+    K->>A: 📊 Stream to Analytics
+    K->>N: 🔔 Stream to Notification
+    K->>PG: 💾 Sync to DB (dbConsumer.js)
+
+    Note over A: [Transformation] 10s Tumbling Window
+    A->>K: 📊 Publish Aggregates to 'analytics'
+
+    Note over N: [Validation] Zod Schema Check
+    alt Success
+        N->>K: ✅ Publish to 'notifications'
+    else Failure
+        N->>K: ⚠️ Route to 'dead-letter-topic'
+    end
+
+    K->>B: ⚡ Stream 'notifications' & 'analytics'
+    B->>D: 🌉 Socket.IO Broadcast ('kafka-event')
+    Note over D: [Serving] Update Recharts & Logs
+```
+
+---
 
 ### 💎 High-Density Operational Cockpit
 The StreamFlow dashboard provides real-time throughput velocity, deep-payload inspection, and infrastructure health monitoring.

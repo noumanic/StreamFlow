@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    %% --- Participants ---
+    participant P as ⚙️ eventProducer.js
+    participant K as ⚡ Apache Kafka
+    participant A as 📊 analyticsConsumer.js
+    participant N as 🔔 notificationConsumer.js
+    participant B as 🌉 websocketBridge.js
+    participant D as 💎 React Dashboard
+    participant PG as 🐘 PostgreSQL 15
+
+    %% --- The Flow ---
+    Note over P: [Generation] Create JSON Event
+    P->>P: 🛡️ maskEmail(user_email)
+    P->>K: 📥 Publish to 'user-events' (Partition 0-2)
+    
+    rect rgb(30, 41, 59)
+        Note right of K: [Ingestion] Durable Persistence
+    end
+
+    parallel
+        K->>A: 📊 Stream to Analytics
+        K->>N: 🔔 Stream to Notification
+        K->>PG: 💾 Sync to DB (dbConsumer.js)
+    end
+
+    rect rgb(15, 23, 42)
+        Note over A: [Transformation] 10s Tumbling Window
+        A->>K: 📊 Publish Aggregates to 'analytics'
+    end
+
+    rect rgb(15, 23, 42)
+        Note over N: [Validation] Zod Schema Check
+        alt Success
+            N->>K: ✅ Publish to 'notifications'
+        else Failure
+            N->>K: ⚠️ Route to 'dead-letter-topic'
+        end
+    end
+
+    K->>B: ⚡ Stream 'notifications' & 'analytics'
+    B->>D: 🌉 Socket.IO Broadcast ('kafka-event')
+    Note over D: [Serving] Update Recharts & Logs
