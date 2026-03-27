@@ -1,0 +1,33 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+
+# Docker
+docker-compose.override.yml
+**/Dockerfile
+**/docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+
+# Kafka / temp data
+kafka-data/
+zookeeper-data/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Misc
+*.swp
+*.bak
+*.tmp
